@@ -1,0 +1,52 @@
+- hosts: all
+  tasks:
+    - name: Update repositories cache and install dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker APT repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+        update_cache: no
+
+    - name: Update repositories cache and install dependencies
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        update_cache: yes
+        state: latest
+
+    - name: Ensure group "docker" exists with correct gid
+      group:
+        name: docker
+        state: present
+
+    # usermod -aG docker vagrant
+    - name: Add vagrant user to docker group
+      user:
+        name: vagrant
+        groups: docker
+        append: yes
+
+    - name: use systemd instead of cgroupfs
+      shell: sed -i 's/ExecStart=.*/ExecStart=\/usr\/bin\/dockerd --exec-opt native.cgroupdriver=systemd/g' /lib/systemd/system/docker.service
+
+    - name: Restart docker service
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        name: docker

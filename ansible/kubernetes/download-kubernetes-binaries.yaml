@@ -1,0 +1,31 @@
+- hosts: all
+  tasks:
+    - name: Add GOOGLE gpg key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+
+    - name: Add K8S APT repository
+      apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+        update_cache: yes
+
+    - name: Download K8S binaries
+      apt:
+        name:
+          - kubeadm
+          - kubectl
+          - kubelet
+        update_cache: yes
+
+    - name: Restart kubelet service
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        name: kubelet
+
+- hosts: master
+  tasks:
+    - name: Pull K8S images
+      shell: kubeadm config images pull    

@@ -1,0 +1,62 @@
+- hosts: master
+  tasks:
+    # https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/#network-plugin-requirements
+    - name: Set up iptables proxy
+      shell: |
+        sudo sysctl net.bridge.bridge-nf-call-iptables=1
+        sudo sysctl net.bridge.bridge-nf-call-ip6tables=1
+        sudo sysctl net.bridge.bridge-nf-call-arptables=1
+
+    - name: Sudo Kubeadm init
+      shell: |
+        sudo kubeadm init --pod-network-cidr 192.168.0.0/16 --apiserver-advertise-address 192.168.1.60
+
+    #  copy cluster's config and grant sufficient rights
+    - name: Config kubectl on master node
+      shell: |
+        sudo cp /etc/kubernetes/admin.conf ./kube-config && sudo chmod 0644 ./kube-config
+
+    # set KUBECONFIG environment variable to use the config file with kubectl and apply Calico manifest
+    - name: Apply Calico manifest to configure network add-on
+      shell: |
+        export KUBECONFIG=./kube-config && kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml && kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml
+
+    # fetch command by default stores the file in a new tree /dest/host/file
+    # flat flag modify the behaviour and allows to copy the file at the destination without the tree
+    - name: Retrieve cluster's config file locally to perform kubectl commands
+      fetch:
+        src: kube-config
+        dest: ~/.kube/kube-ansible-config
+        flat: yes
+
+    - name: Generate join command
+      shell: |
+        sudo kubeadm token create --print-join-command
+      register: join_command
+
+# retrieve var join_command set on master host
+# hostvars['master']['join_command']
+- hosts: nodes
+  tasks:
+    - name: Set up iptables proxy
+      shell: |
+        sudo sysctl net.bridge.bridge-nf-call-iptables=1
+        sudo sysctl net.bridge.bridge-nf-call-ip6tables=1
+        sudo sysctl net.bridge.bridge-nf-call-arptables=1
+
+    - name: Join clusterName
+      shell: |
+        {{ hostvars['master']['join_command'].stdout }}
+
+- hosts: all
+  tasks:
+    # https://medium.com/@joatmon08/playing-with-kubeadm-in-vagrant-machines-part-2-bac431095706
+    - name: Edit kubelet configuration file to fix network issues
+      shell: |
+        echo 'Environment="KUBELET_EXTRA_ARGS=--node-ip={{ hostvars[inventory_hostname].ansible_host }}"' >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+    - name: Restart kubelet service
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        name: kubelet
