@@ -41,3 +41,4 @@ echo
 echo "To check your kubernetes installation:"
 echo "export KUBECONFIG=~/.kube/kube-ansible-config"
 echo "kubectl get nodes"
+echo
