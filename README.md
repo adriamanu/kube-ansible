@@ -1,6 +1,11 @@
 # ☸️ KUBE 🅰️NSIBLE
 
 This repository is meant to install a kubernetes cluster on your local machine thanks to **Vagrant** and **Ansible**.<br>
+
+Install **Vagrant** : https://www.vagrantup.com/downloads<br>
+Install **Ansible** : https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-ansible-on-specific-operating-systems <br>
+Install **Kubectl** : https://kubernetes.io/docs/tasks/tools <br>
+
 There are two scripts located in this repository, **bootstrap.sh** and **purge.sh**.<br>
 **Bootstrap** script require VAGRANT and ANSIBLE. It will provision vms and apply all the playbooks in the right order to bootstrap your cluster.<br>
 **Purge** script will remove vms and clear the ssh known hosts entry related to vms.<br>
@@ -60,7 +65,7 @@ ssh vagrant@192.168.1.62 -i .vagrant/machines/node2/virtualbox/private_key
 Once your machines have been provisioned and installed you can simply run:
 ```bash
 vagrant up # to start your vms
-vagrant halt # to delete your vms
+vagrant halt # to stop your vms
 ```
 
 # KUBECTL ☸️
